@@ -1,6 +1,6 @@
 /* E3D is a 3D Graphic Library for C on Windows
  *
- * Link with gdi32
+ * Link gdi32
  *    GCC: -lgdi32
  */
 
@@ -104,13 +104,8 @@ struct {
   void (*onkeyup)(short);
   void (*onready)();
   void (*onclose)();
+  void (*onupdate)();
 } _E3D_WINDOW;
-
-struct _E3D_WINPROPS {
-  E3D_WINPROPS *winProps;
-  char *title;
-  int nulled;
-};
 
 const unsigned int E3D_OBJECT_SIZE = sizeof(E3D_OBJECT),
                    E3D_SCENE_SIZE  = sizeof(E3D_SCENE),
