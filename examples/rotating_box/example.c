@@ -58,6 +58,10 @@ void onkeydown(short keycode) {
   }
 }
 
+void update() {
+  E3D_Render(&renderer);
+}
+
 int main(int argc, char *argv[]) {
   E3D_WINPROPS props = {
     .x = 0,
@@ -66,7 +70,6 @@ int main(int argc, char *argv[]) {
     .height = 600
   };
 
-  E3D_CreateWindow("Exaple", &props);
   E3D_OnWindowReady(&onready);
   E3D_OnWindowClose(&onclose);
   E3D_OnKeyDown(&onkeydown);
@@ -94,13 +97,8 @@ int main(int argc, char *argv[]) {
   renderer.scene = scene;
   renderer.camera = camera;
 
-  while (1) {
-    E3D_Render(&renderer);
-    box->rotation.x++;
-    box->rotation.y++;
-
-    Sleep(1);
-  }
+  E3D_OnUpdate(&update);
+  E3D_CreateWindow("Exaple", &props);
 
   return 0;
 }
