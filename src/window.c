@@ -1,25 +1,12 @@
 int E3D_CreateWindow(char *, E3D_WINPROPS *);
 
 LRESULT CALLBACK _E3D_WndProc(HWND, UINT, WPARAM, LPARAM);
-void _E3D_CreateWindow(struct _E3D_WINPROPS *);
 void _E3D_WndLoop();
 long E3D_GetWidth();
 long E3D_GetHeight();
 void _E3D_CreatePixelBuffer(_E3D_PIXEL_BUFFER *, long, long);
 
 int E3D_CreateWindow(char *title, E3D_WINPROPS *props) {
-  struct _E3D_WINPROPS *winProps =
-      (struct _E3D_WINPROPS *)malloc(sizeof(struct _E3D_WINPROPS));
-
-  winProps->winProps = props;
-  winProps->title = title;
-  winProps->nulled = props == NULL;
-
-  return CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)&_E3D_CreateWindow,
-                      winProps, 0, NULL) == NULL;
-}
-
-void _E3D_CreateWindow(struct _E3D_WINPROPS *winProps) {
   WNDCLASSEX wndClass = {
     .cbSize        = sizeof(WNDCLASSEX),
     .style         = CS_HREDRAW | CS_VREDRAW,
@@ -45,20 +32,20 @@ void _E3D_CreateWindow(struct _E3D_WINPROPS *winProps) {
 
   int x, y, width, height;
 
-  if (winProps->nulled) {
+  if (props == NULL) {
     x      = CW_USEDEFAULT;
     y      = CW_USEDEFAULT;
     width  = 480;
     height = 480;
   } else {
-    x      = winProps->winProps->x;
-    y      = winProps->winProps->y;
-    width  = winProps->winProps->width;
-    height = winProps->winProps->height;
+    x      = props->x;
+    y      = props->y;
+    width  = props->width;
+    height = props->height;
   }
 
   DWORD style = WS_OVERLAPPEDWINDOW;
-  HWND hWnd   = CreateWindow(wndClass.lpszClassName, winProps->title, style,
+  HWND hWnd   = CreateWindow(wndClass.lpszClassName, title, style,
                              x, y, width, height, NULL, NULL,
                              GetModuleHandle(0), NULL);
 
@@ -90,8 +77,6 @@ void _E3D_CreateWindow(struct _E3D_WINPROPS *winProps) {
     _E3D_WINDOW.onready();
   }
 
-  free(winProps);
-
   _E3D_WINDOW.ready = 1;
 
   MSG msg;
@@ -107,6 +92,12 @@ LRESULT CALLBACK _E3D_WndProc(HWND hWnd, UINT msg, WPARAM wParam,
                               LPARAM lParam)
 {
   switch (msg) {
+    case WM_PAINT:
+      if (_E3D_WINDOW.onupdate) {
+        _E3D_WINDOW.onupdate();
+      }
+
+      break;
     case WM_KEYDOWN:
       if (_E3D_WINDOW.onkeydown) {
         _E3D_WINDOW.onkeydown(wParam);
@@ -183,4 +174,8 @@ void E3D_OnKeyUp(void (*callback)(short)) {
 
 void E3D_OnMouseMove(void (*callback)(int, int)) {
   _E3D_WINDOW.onmousemove = callback;
+}
+
+void E3D_OnUpdate(void (*callback)()) {
+  _E3D_WINDOW.onupdate = callback;
 }
