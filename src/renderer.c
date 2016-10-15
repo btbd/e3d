@@ -54,8 +54,6 @@ void _E3D_Line(_E3D_PIXEL_BUFFER *b, int x0, int y0, int x1, int y1, DWORD c) {
 }
 
 void E3D_Render(E3D_RENDERER *renderer) {
-  system("cls");
-
   if (!_E3D_WINDOW.ready) {
     return;
   }
