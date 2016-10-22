@@ -5,10 +5,10 @@
  */
 
 #include <math.h>
+#define _WIN32_WINNT 0x0501
 #include <windows.h>
+#include <winuser.h>
 
-#undef _WIN32_WINNT
-#define _WIN32_WINNT 0x0500
 #define E3D_PI 3.14159265358979323846
 
 /* Pixel Buffer */
@@ -111,6 +111,7 @@ const unsigned int E3D_OBJECT_SIZE = sizeof(E3D_OBJECT),
                    E3D_SCENE_SIZE  = sizeof(E3D_SCENE),
                    E3D_CAMERA_SIZE = sizeof(E3D_CAMERA);
 
+#include "math.c"
 #include "objects.c"
 #include "window.c"
 #include "pixels.c"

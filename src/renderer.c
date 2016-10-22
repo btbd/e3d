@@ -53,6 +53,40 @@ void _E3D_Line(_E3D_PIXEL_BUFFER *b, int x0, int y0, int x1, int y1, DWORD c) {
   }
 }
 
+// Currently not the fastest filling method, but it will do for now
+void _E3D_FillPlane(_E3D_PIXEL_BUFFER *b, _E3D_PLANE *p, DWORD c) {
+  float ymin = E3D_Min(E3D_Min(p->points[0].y, p->points[1].y), p->points[2].y),
+        ymax = E3D_Max(E3D_Max(p->points[0].y, p->points[1].y), p->points[2].y);
+
+  float xmin = E3D_Min(E3D_Min(p->points[0].x, p->points[1].x), p->points[2].x),
+        xmax = E3D_Max(E3D_Max(p->points[0].x, p->points[1].x), p->points[2].x);
+
+  float a = 0.5 * (-p->points[1].y * p->points[2].x + p->points[0].y *
+                  (-p->points[1].x + p->points[2].x ) + p->points[0].x *
+                  (p->points[1].y - p->points[2].y) + p->points[1].x *
+                   p->points[2].y);
+  float h = 1 / (2 * a);
+  float k, l;
+
+  int x;
+
+  for (; ymin <= ymax; ymin++) {
+    for (x = xmin; x <= xmax; x++) {
+      k = h * (p->points[0].y * p->points[2].x - p->points[0].x * p->points[2].y
+                  + (p->points[2].y - p->points[0].y) * x +
+                      (p->points[0].x - p->points[2].x) * ymin);
+
+      l = h * (p->points[0].x * p->points[1].y - p->points[0].y * p->points[1].x
+                  + (p->points[0].y - p->points[1].y) * x +
+                      (p->points[1].x - p->points[0].x) * ymin);
+
+      if (k > 0 && l > 0 && 1 - k - l > 0) {
+        _E3D_SetPixel(b, x, ymin, c);
+      }
+    }
+  }
+}
+
 void E3D_Render(E3D_RENDERER *renderer) {
   if (!_E3D_WINDOW.ready) {
     return;
@@ -71,6 +105,7 @@ void E3D_Render(E3D_RENDERER *renderer) {
 
   _E3D_PLANES *planes = &_E3D_WINDOW.planes;
   int o;
+
   for (o = 0; o < scene->object_count; o++) {
     _E3D_ObjectToPlanes(camera, planes, objects[o]);
 
@@ -78,30 +113,27 @@ void E3D_Render(E3D_RENDERER *renderer) {
     for (p = 0; p < planes->count; p++) {
       _E3D_PLANE *plane = &planes->planes[p];
 
-      _E3D_PointTransformCamera(&plane->points[0], camera);
-      _E3D_PointTransformCamera(&plane->points[1], camera);
-      _E3D_PointTransformCamera(&plane->points[2], camera);
-
       _E3D_P3DToP2D(&plane->points[0], mulx, muly, mulz, pluz, hwidth, hheight);
       _E3D_P3DToP2D(&plane->points[1], mulx, muly, mulz, pluz, hwidth, hheight);
       _E3D_P3DToP2D(&plane->points[2], mulx, muly, mulz, pluz, hwidth, hheight);
 
-      if (plane->points[0].z < camera->zNear &&
-          plane->points[1].z < camera->zNear &&
-          plane->points[2].z < camera->zNear)
-      {
+      if (!_E3D_IsPlaneVisible(plane, camera)) {
         continue;
       }
 
-      _E3D_Line(&_E3D_WINDOW.pixels, plane->points[2].x, plane->points[2].y,
-                plane->points[0].x, plane->points[0].y,
-                objects[o]->material.color);
-      _E3D_Line(&_E3D_WINDOW.pixels, plane->points[0].x, plane->points[0].y,
-                plane->points[1].x, plane->points[1].y,
-                objects[o]->material.color);
-      _E3D_Line(&_E3D_WINDOW.pixels, plane->points[1].x, plane->points[1].y,
-                plane->points[2].x, plane->points[2].y,
-                objects[o]->material.color);
+      if (objects[o]->material.wireframe) {
+        _E3D_Line(&_E3D_WINDOW.pixels, plane->points[2].x, plane->points[2].y,
+                  plane->points[0].x, plane->points[0].y,
+                  objects[o]->material.color);
+        _E3D_Line(&_E3D_WINDOW.pixels, plane->points[0].x, plane->points[0].y,
+                  plane->points[1].x, plane->points[1].y,
+                  objects[o]->material.color);
+        _E3D_Line(&_E3D_WINDOW.pixels, plane->points[1].x, plane->points[1].y,
+                  plane->points[2].x, plane->points[2].y,
+                  objects[o]->material.color);
+      } else {
+        _E3D_FillPlane(&_E3D_WINDOW.pixels, plane, objects[o]->material.color);
+      }
     }
 
     planes->count = 0;

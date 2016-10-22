@@ -1,4 +1,4 @@
-int E3D_CreateWindow(char *, E3D_WINPROPS *);
+void E3D_CreateWindow(char *, E3D_WINPROPS *);
 
 LRESULT CALLBACK _E3D_WndProc(HWND, UINT, WPARAM, LPARAM);
 void _E3D_WndLoop();
@@ -6,7 +6,7 @@ long E3D_GetWidth();
 long E3D_GetHeight();
 void _E3D_CreatePixelBuffer(_E3D_PIXEL_BUFFER *, long, long);
 
-int E3D_CreateWindow(char *title, E3D_WINPROPS *props) {
+void E3D_CreateWindow(char *title, E3D_WINPROPS *props) {
   WNDCLASSEX wndClass = {
     .cbSize        = sizeof(WNDCLASSEX),
     .style         = CS_HREDRAW | CS_VREDRAW,
@@ -16,14 +16,12 @@ int E3D_CreateWindow(char *title, E3D_WINPROPS *props) {
     .hInstance     = GetModuleHandle(0),
     .hIcon         = LoadIcon(wndClass.hInstance,
                               MAKEINTRESOURCE(IDI_APPLICATION)),
-
     .hCursor       = LoadCursor(NULL, IDC_ARROW),
     .hbrBackground = (HBRUSH)(COLOR_WINDOW + 1),
     .lpszMenuName  = NULL,
     .lpszClassName = "win32app",
     .hIconSm       = LoadIcon(wndClass.hInstance,
                               MAKEINTRESOURCE(IDI_APPLICATION))
-
   };
 
   if (!RegisterClassEx(&wndClass)) {
@@ -65,6 +63,13 @@ int E3D_CreateWindow(char *title, E3D_WINPROPS *props) {
     Sleep(1);
   }
 
+  RAWINPUTDEVICE rid[1];
+  rid[0].usUsagePage = 0x01;
+  rid[0].usUsage = 0x02;
+  rid[0].dwFlags = 0;
+  rid[0].hwndTarget = 0;
+  RegisterRawInputDevices(rid, 1, sizeof(rid[0]));
+
   _E3D_CreatePixelBuffer(&_E3D_WINDOW.pixels, E3D_GetWidth(), E3D_GetHeight());
 
   _E3D_WINDOW.planes.count = 0;
@@ -73,11 +78,10 @@ int E3D_CreateWindow(char *title, E3D_WINPROPS *props) {
   _E3D_WINDOW.planes.planes =
       (_E3D_PLANE *)malloc(_E3D_PLANES_DEFAULT_ALLOC * sizeof(_E3D_PLANE));
 
+  _E3D_WINDOW.ready = 1;
   if (_E3D_WINDOW.onready) {
     _E3D_WINDOW.onready();
   }
-
-  _E3D_WINDOW.ready = 1;
 
   MSG msg;
   while (msg.message != WM_QUIT) {
@@ -110,12 +114,25 @@ LRESULT CALLBACK _E3D_WndProc(HWND hWnd, UINT msg, WPARAM wParam,
       }
 
       break;
-    case WM_MOUSEMOVE:
-      if (_E3D_WINDOW.onmousemove) {
-        _E3D_WINDOW.onmousemove(LOWORD(lParam), HIWORD(lParam));
+    case WM_INPUT: {
+      UINT dwSize;
+
+      GetRawInputData((HRAWINPUT)lParam, RID_INPUT, NULL, &dwSize, sizeof(RAWINPUTHEADER));
+
+      LPBYTE lpb[dwSize];
+
+      GetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER));
+
+      RAWINPUT *r = (RAWINPUT *)lpb;
+
+      if (r->header.dwType == RIM_TYPEMOUSE) {
+        if (_E3D_WINDOW.onmousemove) {
+          _E3D_WINDOW.onmousemove(r->data.mouse.lLastX, r->data.mouse.lLastY);
+        }
       }
 
       break;
+    }
     case WM_CLOSE:
       if (_E3D_WINDOW.onclose) {
         _E3D_WINDOW.onclose();
@@ -178,4 +195,43 @@ void E3D_OnMouseMove(void (*callback)(int, int)) {
 
 void E3D_OnUpdate(void (*callback)()) {
   _E3D_WINDOW.onupdate = callback;
+}
+
+int E3D_KeyIsDown(short keycode) {
+  return GetAsyncKeyState(keycode) < 0;
+}
+
+short E3D_GetKeyCode(char key) {
+  return MapVirtualKey(key, 2);
+}
+
+void E3D_SetCursorPos(int x, int y) {
+  static POINT point;
+
+  point.x = x;
+  point.y = y;
+
+  ClientToScreen(*_E3D_WINDOW.hWnd, &point);
+  SetCursorPos(point.x, point.y);
+}
+
+void E3D_HideCursor() {
+  ShowCursor(0);
+}
+
+void E3D_ShowCursor() {
+  ShowCursor(1);
+}
+
+long E3D_GetTime() {
+  static LARGE_INTEGER f;
+  static LARGE_INTEGER c;
+
+  if (!f.QuadPart) {
+    QueryPerformanceFrequency(&f);
+  }
+
+  QueryPerformanceCounter(&c);
+
+  return (c.QuadPart *= 1000) / f.QuadPart;
 }
