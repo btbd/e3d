@@ -1,104 +1,67 @@
 #include <stdio.h>
-#include "e3d.h"
+ #include "e3d.h"
 
-E3D_RENDERER renderer;
+ E3D_RENDERER renderer;
+ long lastUpdate;
 
-void onready() {
-  printf("Window Created\n\n");
+ void onready() {
+   printf("Window Created\n\n");
 
-  printf("Width: %dpx\nHeight: %dpx\n", E3D_GetWidth(), E3D_GetHeight());
-}
+   printf("Width: %dpx\nHeight: %dpx\n", E3D_GetWidth(), E3D_GetHeight());
+ }
 
-void onclose() {
-  exit(0);
-}
+ void onclose() {
+   exit(0);
+ }
 
-void onkeydown(short keycode) {
-  switch (keycode) {
-    // D
-    case 68:
-      renderer.camera->x++;
-      break;
-    // A
-    case 65:
-      renderer.camera->x--;
-      break;
-    // W
-    case 87:
-      renderer.camera->z--;
-      break;
-    // S
-    case 83:
-      renderer.camera->z++;
-      break;
-    // Shift
-    case 16:
-      renderer.camera->y--;
-      break;
-    // Space
-    case 32:
-      renderer.camera->y++;
-      break;
-    // Up arrow
-    case 38:
-      renderer.camera->rotation.x++;
-      break;
-    // Down arrow
-    case 40:
-      renderer.camera->rotation.x--;
-      break;
-    // Left arrow
-    case 37:
-      renderer.camera->rotation.y++;
-      break;
-    // Right arrow
-    case 39:
-      renderer.camera->rotation.y--;
-      break;
-  }
-}
+ void update() {
+   if (E3D_GetTime() < lastUpdate + 17) {
+     return;
+   }
 
-void update() {
-  E3D_Render(&renderer);
-}
+   E3D_Render(&renderer);
+   renderer.scene->objects[0]->rotation.y++;
 
-int main(int argc, char *argv[]) {
-  E3D_WINPROPS props = {
-    .x = 0,
-    .y = 0,
-    .width = 600,
-    .height = 600
-  };
+   lastUpdate = E3D_GetTime();
+ }
 
-  E3D_OnWindowReady(&onready);
-  E3D_OnWindowClose(&onclose);
-  E3D_OnKeyDown(&onkeydown);
+ int main(int argc, char *argv[]) {
+   E3D_WINPROPS props = {
+     .x = 0,
+     .y = 0,
+     .width = 600,
+     .height = 600
+   };
 
-  E3D_SCENE *scene   = E3D_Scene();
-  E3D_CAMERA *camera = E3D_Camera();
+   E3D_OnWindowReady(&onready);
+   E3D_OnWindowClose(&onclose);
 
-  camera->zNear = 1;
-  camera->zFar = 1000;
-  camera->fov = 75;
+   E3D_SCENE *scene   = E3D_Scene();
+   E3D_CAMERA *camera = E3D_Camera();
 
-  E3D_OBJECT *box  = E3D_Object(E3D_OBJECT_PRISM);
+   camera->zNear = 1;
+   camera->zFar = 1000;
+   camera->fov = 90;
 
-  box->width = 25;
-  box->depth = 25;
-  box->height = 25;
-  box->x = 0;
-  box->z = -100;
-  box->rotation.y = 45;
+   E3D_OBJECT *box  = E3D_Object(E3D_OBJECT_PRISM);
 
-  box->material.color = E3D_RGB(255, 0, 0);
+   box->width = 25;
+   box->depth = 25;
+   box->height = 25;
+   box->x = 0;
+   box->z = -100;
+   box->rotation.y = 45;
 
-  E3D_ScenePush(scene, box);
+   box->material.color = E3D_RGB(255, 0, 0);
+   box->material.wireframe = 1;;
 
-  renderer.scene = scene;
-  renderer.camera = camera;
+   E3D_ScenePush(scene, box);
 
-  E3D_OnUpdate(&update);
-  E3D_CreateWindow("Exaple", &props);
+   renderer.scene = scene;
+   renderer.camera = camera;
 
-  return 0;
-}
+   E3D_OnUpdate(&update);
+   E3D_CreateWindow("Example", &props);
+
+   return 0;
+ }
